@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+pydantic
+gradio
+openenv-core>=0.2.0

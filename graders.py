@@ -1,0 +1,1 @@
+def grade(x): return {'score': 1}

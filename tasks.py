@@ -1,0 +1,1 @@
+def task(x): return x
