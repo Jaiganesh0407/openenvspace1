@@ -1,16 +1,27 @@
 [project]
 name = "openenv-agent"
 version = "0.1.0"
-description = "OpenEnv AI Agent"
+description = "OpenEnv Data Cleaning Agent"
+authors = [
+  { name = "Your Name" }
+]
 requires-python = ">=3.9"
 
 dependencies = [
   "fastapi",
   "uvicorn",
   "pydantic",
-  "gradio",
+  "requests",
+  "pandas",
+  "openai",
   "openenv-core>=0.2.0"
 ]
 
+# ✅ REQUIRED for OpenEnv multi-mode
 [project.scripts]
-server = "server.app:app"
+server = "server.app:main"
+
+# Optional but safe (prevents packaging issues)
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
