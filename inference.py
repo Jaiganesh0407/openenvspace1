@@ -3,28 +3,29 @@ import sys
 import time
 import requests
 
-# Safe import
+# Safe OpenAI import
 try:
     from openai import OpenAI
 except:
     OpenAI = None
 
+
 def log(msg):
     sys.stdout.write(msg + "\n")
     sys.stdout.flush()
 
-# ENV VARIABLES (MANDATORY)
+
+# REQUIRED ENV VARIABLES
 API_BASE_URL = os.getenv("API_BASE_URL")
 API_KEY = os.getenv("API_KEY") or os.getenv("HF_TOKEN")
 MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-mini")
 
-# ENV INFO
+# ENV SETTINGS
+ENV_BASE = "http://127.0.0.1:7860"
 TASKS = ["easy", "medium", "hard"]
 BENCHMARK = "data_cleaning_env"
 
-ENV_BASE = "http://127.0.0.1:7860"
-
-# OpenAI client
+# Initialize OpenAI client
 client = None
 if API_BASE_URL and API_KEY and OpenAI:
     try:
@@ -34,6 +35,7 @@ if API_BASE_URL and API_KEY and OpenAI:
 
 
 def choose_action(task):
+    """Use LLM proxy (REQUIRED by validator)"""
     if not client:
         return "clean_nulls"
 
@@ -41,11 +43,11 @@ def choose_action(task):
         response = client.chat.completions.create(
             model=MODEL_NAME,
             messages=[
-                {"role": "system", "content": "Choose best action: clean_nulls or deduplicate"},
+                {"role": "system", "content": "Return one word: clean_nulls or deduplicate"},
                 {"role": "user", "content": f"Task: {task}"}
             ],
             temperature=0.2,
-            max_tokens=10
+            max_tokens=5
         )
 
         text = (response.choices[0].message.content or "").lower()
@@ -54,7 +56,7 @@ def choose_action(task):
             return "deduplicate"
         return "clean_nulls"
 
-    except:
+    except Exception:
         return "clean_nulls"
 
 
@@ -63,20 +65,19 @@ def run_task(task):
 
     rewards = []
     steps = 0
-    success = False
 
+    # Reset environment
     try:
         r = requests.post(f"{ENV_BASE}/reset", timeout=5)
         r.raise_for_status()
     except:
-        # fallback
-        log(f"[STEP] step=1 action=clean_nulls reward=0.00 done=true error=null")
-        log(f"[END] success=false steps=1 score=0.00 rewards=0.00")
+        log("[STEP] step=1 action=clean_nulls reward=0.00 done=true error=null")
+        log("[END] success=false steps=1 score=0.00 rewards=0.00")
         return
 
+    # Execute steps
     for step in range(1, 4):
         steps = step
-
         action = choose_action(task)
 
         try:
@@ -105,11 +106,10 @@ def run_task(task):
 
         time.sleep(0.05)
 
-    # score calculation
+    # Score calculation (normalized)
     total_reward = sum(rewards)
     score = min(max(total_reward / max(len(rewards), 1), 0.0), 1.0)
-
-    success = score > 0.1
+    success = score >= 0.1
 
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
 
@@ -117,5 +117,5 @@ def run_task(task):
 
 
 if __name__ == "__main__":
-    for t in TASKS:
-        run_task(t)
+    for task in TASKS:
+        run_task(task)
